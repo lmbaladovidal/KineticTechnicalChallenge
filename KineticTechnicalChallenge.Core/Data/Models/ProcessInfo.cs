@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace KineticTechnicalChallenge.Core.Models
+namespace KineticTechnicalChallenge.Core.Data.Models
 {
     public class ProcessInfo
     {
@@ -13,5 +13,6 @@ namespace KineticTechnicalChallenge.Core.Models
         public int ProcessedFiles { get; set; }
         public int Percentage { get; set; }
         public AnalysisResult Results { get; set; }
+        public string FilesJson { get; set; }
     }
 }

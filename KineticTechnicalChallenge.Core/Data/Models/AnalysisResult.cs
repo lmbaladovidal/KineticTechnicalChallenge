@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace KineticTechnicalChallenge.Core.Models
+namespace KineticTechnicalChallenge.Core.Data.Models
 {
     public class AnalysisResult
     {

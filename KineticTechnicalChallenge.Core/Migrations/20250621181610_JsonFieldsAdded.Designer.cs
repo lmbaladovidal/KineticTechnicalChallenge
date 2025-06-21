@@ -3,6 +3,7 @@ using System;
 using KineticTechnicalChallenge.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KineticTechnicalChallenge.Core.Migrations
 {
     [DbContext(typeof(DocumentContext))]
-    partial class DocumentContextModelSnapshot : ModelSnapshot
+    [Migration("20250621181610_JsonFieldsAdded")]
+    partial class JsonFieldsAdded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");

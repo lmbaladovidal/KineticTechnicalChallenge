@@ -1,4 +1,4 @@
-﻿namespace KineticTechnicalChallenge.Core.Models
+﻿namespace KineticTechnicalChallenge.Core.Data.Models
 {
     public class ProgressInfo
     {
