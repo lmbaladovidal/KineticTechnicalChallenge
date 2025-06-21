@@ -1,9 +1,11 @@
-﻿using KineticTechnicalChallenge.Core.Contract.Interfaces;
+﻿using KineticTechnicalChallenge.Core.Contract.Configuration;
+using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using KineticTechnicalChallenge.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace KineticTechnicalChallenge.Services.BackGroundServices
@@ -13,12 +15,14 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
         private readonly IServiceProvider _serviceProvider;
         private readonly IProcessQueue _queue;
         private readonly ILogger<ProcessWorker> _logger;
+        private readonly TextProcessingSettings _settings;
 
-        public ProcessWorker(IServiceProvider serviceProvider, IProcessQueue queue, ILogger<ProcessWorker> logger)
+        public ProcessWorker(IServiceProvider serviceProvider, IProcessQueue queue, ILogger<ProcessWorker> logger, IOptions<TextProcessingSettings> settings)
         {
             _serviceProvider = serviceProvider;
             _queue = queue;
             _logger = logger;
+            _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,10 +36,10 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                 }
 
                 using var scope = _serviceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<DocumentContext>();
-                var analyzer = scope.ServiceProvider.GetRequiredService<AnalysisService>();
+                var _context = scope.ServiceProvider.GetRequiredService<DocumentContext>();
+                var analyzer = scope.ServiceProvider.GetRequiredService<IAnalysisServices>();
 
-                var process = await db.Processes
+                var process = await _context.Processes
                     .Include(p => p.Results)
                     .FirstOrDefaultAsync(p => p.Id == processId);
 
@@ -43,7 +47,7 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     continue;
 
                 process.Status = ProcessStatus.Running;
-                await db.SaveChangesAsync();
+                await _context.SaveChangesAsync();
 
                 var fileNames = JsonSerializer.Deserialize<List<string>>(process.FilesJson) ?? new();
                 var processedCount = process.ProcessedFiles;
@@ -53,14 +57,13 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
 
                 foreach (var file in remainingFiles)
                 {
-                    if (await IsPausedOrStopped(process.Id, db)) break;
+                    if (await IsPausedOrStopped(process.Id, _context)) break;
+                    var inputFolder = _settings.InputFolder;
+                    var filePath = Path.Combine(inputFolder, file);
+                    var content = await File.ReadAllTextAsync(filePath);
 
-                    var content = await File.ReadAllTextAsync(Path.Combine("TextFolder", file));
-
-                    // Análisis del archivo individual
                     var partial = analyzer.AnalyzeFile(content, file);
 
-                    // Acumulamos resultados
                     results.TotalWords += partial.TotalWords;
                     results.TotalLines += partial.TotalLines;
                     results.TotalCharacters += partial.TotalCharacters;
@@ -81,18 +84,17 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     results.MostFrequentWordsJson = JsonSerializer.Serialize(mostFreq);
                     results.FilesProcessedJson = JsonSerializer.Serialize(filesProc);
 
-                    // Actualizamos progreso
                     process.ProcessedFiles++;
                     process.Percentage = (int)((double)process.ProcessedFiles / process.TotalFiles * 100);
 
-                    await db.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
                 }
 
                 if (process.Status == ProcessStatus.Running)
                 {
                     process.Status = ProcessStatus.Completed;
                     process.EstimatedCompletion = DateTime.UtcNow;
-                    await db.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
                 }
             }
         }

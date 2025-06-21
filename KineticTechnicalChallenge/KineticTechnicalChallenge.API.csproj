@@ -22,4 +22,8 @@
     <ProjectReference Include="..\KineticTechnicalChallenge.Services\KineticTechnicalChallenge.Services.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TextFiles\" />
+  </ItemGroup>
+
 </Project>

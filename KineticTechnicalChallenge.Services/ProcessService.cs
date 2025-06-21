@@ -4,6 +4,7 @@ using KineticTechnicalChallenge.Core.Contract.DTO.Response;
 using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using KineticTechnicalChallenge.Core.Data;
 using KineticTechnicalChallenge.Core.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
@@ -59,7 +60,7 @@ namespace KineticTechnicalChallenge.Services
             {
                 Id = processId,
                 StartedAt = DateTime.UtcNow,
-                EstimatedCompletion = DateTime.UtcNow.AddMinutes(2),
+                EstimatedCompletion = DateTime.UtcNow.AddSeconds(files.filenames.Count * 10),
                 Status = ProcessStatus.Pending,
                 TotalFiles = files.filenames.Count,
                 ProcessedFiles = 0,
@@ -131,9 +132,38 @@ namespace KineticTechnicalChallenge.Services
             throw new NotImplementedException();
         }
 
-        public Task<ProcessResponse> StopProcessAsync(string processGuid)
+        public async Task<ProcessResponse> StopProcessAsync(string processGuid)
         {
-            throw new NotImplementedException();
+            var process = await _context.Processes
+                .Include(p => p.Results)
+                .FirstOrDefaultAsync(p => p.Id == Guid.Parse(processGuid));
+
+            process.Status = ProcessStatus.Stopped;
+            await _context.SaveChangesAsync();
+
+            return new ProcessResponse
+            {
+                ProcessInfoDTO = new ProcessInfoDTO
+                {
+                    Guid = process.Id,
+                    Status = process.Status,
+                    StartedAt = process.StartedAt,
+                    EstimatedCompletion = process.EstimatedCompletion,
+                    ProgressInfo = new ProgressInfo
+                    {
+                        TotalFiles = process.TotalFiles,
+                        ProcessedFiles = process.ProcessedFiles,
+                    }
+                },
+                Results = new AnalysisResultDTO
+                {
+                    TotalWords = process.Results.TotalWords,
+                    TotalLines = process.Results.TotalLines,
+                    TotalCharacters = process.Results.TotalCharacters,
+                    MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
+                    FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
+                }
+            };
         }
     }
 }

@@ -1,5 +1,6 @@
 using KineticTechnicalChallenge.Core.Contract.DTO;
 using KineticTechnicalChallenge.Core.Contract.DTO.Response;
+using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KineticTechnicalChallenge.API.Controllers
@@ -10,46 +11,28 @@ namespace KineticTechnicalChallenge.API.Controllers
     {
 
         private readonly ILogger<ProcessController> _logger;
-
-        public ProcessController(ILogger<ProcessController> logger)
+        private readonly IProcessServices _processServices;
+        public ProcessController(ILogger<ProcessController> logger, IProcessServices process)
         {
             _logger = logger;
+            _processServices = process ?? throw new ArgumentNullException(nameof(process));
         }
 
         [HttpPost("/process/start")]
         [ProducesResponseType<ProcessResponse>(StatusCodes.Status201Created)]
-        public IActionResult StartProcess()
+        public async Task<IActionResult> StartProcess()
         {
-            var response = new ProcessResponse
-            {
-                ProcessInfoDTO = new ProcessInfoDTO
-                {
-                    Guid = Guid.NewGuid(),
-                    Status = ProcessStatus.Running,
-                    StartedAt = DateTime.UtcNow,
-                    EstimatedCompletion = DateTime.UtcNow.AddMinutes(2)
-                },
-            };
-
-            _logger.LogInformation("Process {ProcessId} started successfully.", response.ProcessInfoDTO.Guid);
-
-            return CreatedAtAction(nameof(GetProcessStatus), new { processGuid = response.ProcessInfoDTO.Guid }, response);
+            _logger.LogInformation("Starting a new process...");
+            var result = await _processServices.StartProcessAsync();
+            _logger.LogInformation("Process {ProcessId} started successfully.", result.ProcessInfoDTO.Guid);
+            return CreatedAtAction(nameof(GetProcessStatus), new { processGuid = result.ProcessInfoDTO.Guid }, result);
         }
 
         [HttpPost("/process/stop/{processGuid}")]
         [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
-        public IActionResult StopProcess(string processGuid)
+        public async Task<IActionResult> StopProcess(string processGuid)
         {
-            var response = new ProcessResponse
-            {
-                ProcessInfoDTO = new ProcessInfoDTO
-                {
-                    Guid = Guid.NewGuid(),
-                    Status = ProcessStatus.Running,
-                    StartedAt = DateTime.UtcNow,
-                    EstimatedCompletion = DateTime.UtcNow.AddMinutes(2)
-                },
-            };
+            var result = await _processServices.StopProcessAsync(processGuid);
             _logger.LogInformation($"Process {processGuid} stopped successfully.");
             return Ok(response);
         }
