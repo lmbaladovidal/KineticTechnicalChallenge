@@ -1,4 +1,4 @@
-﻿using KineticTechnicalChallenge.Core.Models;
+﻿using KineticTechnicalChallenge.Core.Data.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace KineticTechnicalChallenge.Core.Data

@@ -1,7 +1,7 @@
-﻿using KineticTechnicalChallenge.Core.Models;
+﻿using KineticTechnicalChallenge.Core.Data.Models;
 using System.Text.Json.Serialization;
 
-namespace KineticTechnicalChallenge.Core.DTO
+namespace KineticTechnicalChallenge.Core.Contract.DTO
 {
     public class ProcessInfoDTO
     {

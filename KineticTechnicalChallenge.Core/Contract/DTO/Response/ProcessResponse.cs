@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace KineticTechnicalChallenge.Core.DTO.Response
+namespace KineticTechnicalChallenge.Core.Contract.DTO.Response
 {
     public class ProcessResponse
     {

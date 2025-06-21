@@ -1,8 +1,8 @@
-using KineticTechnicalChallenge.Core.DTO;
-using KineticTechnicalChallenge.Core.DTO.Response;
+using KineticTechnicalChallenge.Core.Contract.DTO;
+using KineticTechnicalChallenge.Core.Contract.DTO.Response;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KineticTechnicalChallenge.Controllers
+namespace KineticTechnicalChallenge.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -22,7 +22,7 @@ namespace KineticTechnicalChallenge.Controllers
         {
             var response = new ProcessResponse
             {
-                ProcessInfoDTO = new Core.DTO.ProcessInfoDTO
+                ProcessInfoDTO = new ProcessInfoDTO
                 {
                     Guid = Guid.NewGuid(),
                     Status = ProcessStatus.Running,
@@ -42,7 +42,7 @@ namespace KineticTechnicalChallenge.Controllers
         {
             var response = new ProcessResponse
             {
-                ProcessInfoDTO = new Core.DTO.ProcessInfoDTO
+                ProcessInfoDTO = new ProcessInfoDTO
                 {
                     Guid = Guid.NewGuid(),
                     Status = ProcessStatus.Running,

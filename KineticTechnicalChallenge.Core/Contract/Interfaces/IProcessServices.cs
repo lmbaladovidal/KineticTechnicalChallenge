@@ -1,6 +1,6 @@
-﻿using KineticTechnicalChallenge.Core.DTO.Response;
+﻿using KineticTechnicalChallenge.Core.Contract.DTO.Response;
 
-namespace KineticTechnicalChallenge.Core.Interfaces
+namespace KineticTechnicalChallenge.Core.Contract.Interfaces
 {
     public interface IProcessServices
     {
