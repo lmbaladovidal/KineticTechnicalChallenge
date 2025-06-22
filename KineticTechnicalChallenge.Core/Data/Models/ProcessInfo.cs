@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using KineticTechnicalChallenge.Core.Contract.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace KineticTechnicalChallenge.Core.Data.Models
 {

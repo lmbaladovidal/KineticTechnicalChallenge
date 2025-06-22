@@ -1,6 +1,7 @@
 ﻿using KineticTechnicalChallenge.Core.Contract.Configuration;
 using KineticTechnicalChallenge.Core.Contract.DTO;
 using KineticTechnicalChallenge.Core.Contract.DTO.Response;
+using KineticTechnicalChallenge.Core.Contract.Enums;
 using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using KineticTechnicalChallenge.Core.Data;
 using KineticTechnicalChallenge.Core.Data.Models;
@@ -36,82 +37,170 @@ namespace KineticTechnicalChallenge.Services
             _queue = processQueue ?? throw new ArgumentNullException(nameof(processQueue));
 
         }
-        public Task<ProcessResponse> GetProcessResultsAsync(string processGuid)
+        public async Task<ProcessResponse> GetProcessResultsAsync(string processGuid)
         {
-            throw new NotImplementedException();
+            if (!Guid.TryParse(processGuid, out var guid))
+            {
+                throw new ArgumentException("Invalid GUID format", nameof(processGuid));
+            }
+            var result = await _context.Results
+                .FirstOrDefaultAsync(r => r.ProcessInfoId == Guid.Parse(processGuid));
+            if (result != null)
+            {
+                return new ProcessResponse
+                {
+                    Results = new AnalysisResultDTO
+                    {
+                        TotalWords = result.TotalWords,
+                        TotalLines = result.TotalLines,
+                        TotalCharacters = result.TotalCharacters,
+                        MostFrequentWords = JsonSerializer.Deserialize<List<string>>(result.MostFrequentWordsJson) ?? new List<string>(),
+                        FilesProcessed = JsonSerializer.Deserialize<List<string>>(result.FilesProcessedJson) ?? new List<string>()
+                    }
+                };
+            }
+            else
+            {
+                throw new InvalidOperationException("Process Result not found");
+            }
+
         }
 
-        public Task<ProcessResponse> GetProcessStatusAsync(string processGuid)
+        public async Task<ProcessStatus> GetProcessStatusAsync(string processGuid)
         {
-            throw new NotImplementedException();
+            if (!Guid.TryParse(processGuid, out var guid))
+            {
+                throw new ArgumentException("Invalid GUID format", nameof(processGuid));
+            }
+            var processStatus = await _context.Processes
+                .Where(ProcessStatus => ProcessStatus.Id == Guid.Parse(processGuid))
+                .Select(p => p.Status).FirstOrDefaultAsync();
+
+            if (processStatus == default)
+            {
+                throw new InvalidOperationException("Process not found");
+            }
+            return processStatus;
+
         }
 
-        public Task<List<ProcessResponse>> ListProcessesAsync()
+        public async Task<List<ProcessResponse>> ListProcessesAsync()
         {
-            throw new NotImplementedException();
+            var processes = await _context.Processes
+                .Include(p => p.Results).ToListAsync();
+            var processResponses = new List<ProcessResponse>();
+            if (processes != null)
+            {
+                foreach (var process in processes)
+                {
+                    processResponses.Add(new ProcessResponse
+                    {
+                        ProcessInfoDTO = new ProcessInfoDTO
+                        {
+                            Guid = process.Id,
+                            Status = process.Status,
+                            StartedAt = process.StartedAt,
+                            EstimatedCompletion = process.EstimatedCompletion,
+                            ProgressInfo = new ProgressInfo
+                            {
+                                TotalFiles = process.TotalFiles,
+                                ProcessedFiles = process.ProcessedFiles,
+                            }
+                        },
+                        Results = new AnalysisResultDTO
+                        {
+                            TotalWords = process.Results.TotalWords,
+                            TotalLines = process.Results.TotalLines,
+                            TotalCharacters = process.Results.TotalCharacters,
+                            MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
+                            FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
+                        }
+                    });
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("No process found");
+            }
+            return processResponses;
         }
 
-        public async Task<ProcessResponse> StartProcessAsync()
+        public async Task<List<ProcessResponse>> StartProcessAsync()
         {
             var files = await GetFiles();// Get the files from the input folder
-            var processId = Guid.NewGuid();
-
-            var process = new ProcessInfo
+            List<ProcessInfo> batchesFiles = SetBatches(files);//Check if there are more than 10 files, if so, create batches of 5 files each
+            List<ProcessResponse> processResponses = new List<ProcessResponse>();
+            foreach (var process in batchesFiles)
             {
-                Id = processId,
-                StartedAt = DateTime.UtcNow,
-                EstimatedCompletion = DateTime.UtcNow.AddSeconds(files.filenames.Count * 10),
-                Status = ProcessStatus.Pending,
-                TotalFiles = files.filenames.Count,
-                ProcessedFiles = 0,
-                Percentage = 0,
-                FilesJson = JsonSerializer.Serialize(files.filenames)
-            };
-
-            var result = new AnalysisResult
-            {
-                Id = Guid.NewGuid(),
-                ProcessInfoId = processId,
-                TotalWords = 0,
-                TotalLines = 0,
-                TotalCharacters = 0,
-                MostFrequentWordsJson = JsonSerializer.Serialize(new List<string>()),
-                FilesProcessedJson = JsonSerializer.Serialize(new List<string>())
-            };
-
-            process.Results = result;
-
-            await _context.Processes.AddAsync(process);
-            await _context.SaveChangesAsync();
-
-            _queue.Enqueue(processId);
-
-            return new ProcessResponse
-            {
-                ProcessInfoDTO = new ProcessInfoDTO
+                await _context.Processes.AddAsync(process);
+                await _context.SaveChangesAsync();
+                _queue.Enqueue(process.Id);
+                processResponses.Add(new ProcessResponse
                 {
-                    Guid = process.Id,
-                    Status = process.Status,
-                    StartedAt = process.StartedAt,
-                    EstimatedCompletion = process.EstimatedCompletion,
-                    ProgressInfo = new ProgressInfo
+                    ProcessInfoDTO = new ProcessInfoDTO
                     {
-                        TotalFiles = process.TotalFiles,
-                        ProcessedFiles = process.ProcessedFiles,
+                        Guid = process.Id,
+                        Status = process.Status,
+                        StartedAt = process.StartedAt,
+                        EstimatedCompletion = process.EstimatedCompletion,
+                        ProgressInfo = new ProgressInfo
+                        {
+                            TotalFiles = process.TotalFiles,
+                            ProcessedFiles = process.ProcessedFiles,
+                        }
+                    },
+                    Results = new AnalysisResultDTO
+                    {
+                        TotalWords = process.Results.TotalWords,
+                        TotalLines = process.Results.TotalLines,
+                        TotalCharacters = process.Results.TotalCharacters,
+                        MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
+                        FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
                     }
-                },
-                Results = new AnalysisResultDTO
-                {
-                    TotalWords = process.Results.TotalWords,
-                    TotalLines = process.Results.TotalLines,
-                    TotalCharacters = process.Results.TotalCharacters,
-                    MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
-                    FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
-                }
-            };
+                });
+            }
+
+            return processResponses;
         }
 
+        private List<ProcessInfo> SetBatches((List<string> contents, List<string> filenames) files)
+        {
+            var batches = new List<ProcessInfo>();
+            for (var i = 0; i < files.filenames.Count; i += 5)
+            {
+                var batchFiles = files.filenames.Skip(i).Take(5).ToList();
+                if (batchFiles.Count > 0)
+                {
+                    var processId = Guid.NewGuid();
+                    var process = new ProcessInfo
+                    {
+                        Id = processId,
+                        StartedAt = DateTime.UtcNow,
+                        EstimatedCompletion = DateTime.UtcNow.AddSeconds(batchFiles.Count * 2),
+                        Status = ProcessStatus.Pending,
+                        TotalFiles = batchFiles.Count,
+                        ProcessedFiles = 0,
+                        Percentage = 0,
+                        FilesJson = JsonSerializer.Serialize(batchFiles)
+                    };
 
+                    var result = new AnalysisResult
+                    {
+                        Id = Guid.NewGuid(),
+                        ProcessInfoId = processId,
+                        TotalWords = 0,
+                        TotalLines = 0,
+                        TotalCharacters = 0,
+                        MostFrequentWordsJson = JsonSerializer.Serialize(new List<string>()),
+                        FilesProcessedJson = JsonSerializer.Serialize(new List<string>())
+                    };
+                    process.Results = result;
+                    batches.Add(process);
+                }
+            }
+
+            return batches;
+        }
 
         private async Task<(List<string> contents, List<string> filenames)> GetFiles()
         {
@@ -120,6 +209,7 @@ namespace KineticTechnicalChallenge.Services
             var fileNames = new List<string>();
 
             foreach (var file in files)
+
             {
                 contents.Add(await File.ReadAllTextAsync(file));
                 fileNames.Add(Path.GetFileName(file));
@@ -152,9 +242,6 @@ namespace KineticTechnicalChallenge.Services
             {
                 throw new InvalidOperationException("Process not found or not in running state");
             }
-            process = await _context.Processes.AsNoTracking()
-                .Include(p => p.Results)
-                .FirstOrDefaultAsync(p => p.Id == Guid.Parse(processGuid));
             return new ProcessResponse
             {
                 ProcessInfoDTO = new ProcessInfoDTO

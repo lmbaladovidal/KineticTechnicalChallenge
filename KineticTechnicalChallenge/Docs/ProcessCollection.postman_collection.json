@@ -1,0 +1,175 @@
+{
+	"info": {
+		"_postman_id": "4c7b7f15-18e8-47f2-8950-a1eb2b3f99e5",
+		"name": "ProcessCollection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18219885"
+	},
+	"item": [
+		{
+			"name": "procesStart",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/start",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"start"
+					]
+				},
+				"description": "This endpoint generate a proces per batch. Each bactch has five files inside.\n\nOnce the endpoint ends the backgroundservices will start with the pending processes"
+			},
+			"response": []
+		},
+		{
+			"name": "procesStop",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/stop/139429dd-d3d2-43b8-8ff6-73c00bf6975c",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"stop",
+						"139429dd-d3d2-43b8-8ff6-73c00bf6975c"
+					],
+					"query": [
+						{
+							"key": "procesguid",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "This endpoint stops a process with status pending or running. Another status will cosider not valid to be stoped and the error will be show"
+			},
+			"response": []
+		},
+		{
+			"name": "procesContinue",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/continue/139429dd-d3d2-43b8-8ff6-73c00bf6975c",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"continue",
+						"139429dd-d3d2-43b8-8ff6-73c00bf6975c"
+					],
+					"query": [
+						{
+							"key": "procesguid",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "This endpoins allows the user cotinue with the processing of a stoped batch. Any process with status STOPPED will be able to be estarted from the stop point"
+			},
+			"response": []
+		},
+		{
+			"name": "procesStatus",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/status/139429dd-d3d2-43b8-8ff6-73c00bf6975c",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"status",
+						"139429dd-d3d2-43b8-8ff6-73c00bf6975c"
+					],
+					"query": [
+						{
+							"key": "procesguid",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "this endpoint return a number with the inter code status  \n0 -> Pending,  \n1 -> Running,  \n2 -> Paused,  \n3 -> Completed,  \n4 -> Failed,  \n5 -> Stopped"
+			},
+			"response": []
+		},
+		{
+			"name": "procesList",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/list",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"list"
+					],
+					"query": [
+						{
+							"key": "procesguid",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "This endpoint retunrs a lisf of all the process with any status"
+			},
+			"response": []
+		},
+		{
+			"name": "procesResults",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://localhost:7280/process/results/139429dd-d3d2-43b8-8ff6-73c00bf6975c",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "7280",
+					"path": [
+						"process",
+						"results",
+						"139429dd-d3d2-43b8-8ff6-73c00bf6975c"
+					],
+					"query": [
+						{
+							"key": "procesguid",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "this endpoint return the Analyze result of the procces with the specified guid"
+			},
+			"response": []
+		}
+	]
+}

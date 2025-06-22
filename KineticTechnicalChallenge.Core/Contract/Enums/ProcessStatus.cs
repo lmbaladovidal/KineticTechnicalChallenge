@@ -1,9 +1,12 @@
-﻿public enum ProcessStatus
+﻿namespace KineticTechnicalChallenge.Core.Contract.Enums
 {
-    Pending,
-    Running,
-    Paused,
-    Completed,
-    Failed,
-    Stopped
+    public enum ProcessStatus
+    {
+        Pending,
+        Running,
+        Paused,
+        Completed,
+        Failed,
+        Stopped
+    }
 }

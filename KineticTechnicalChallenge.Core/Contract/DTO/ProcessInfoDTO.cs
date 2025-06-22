@@ -1,4 +1,5 @@
-﻿using KineticTechnicalChallenge.Core.Data.Models;
+﻿using KineticTechnicalChallenge.Core.Contract.Enums;
+using KineticTechnicalChallenge.Core.Data.Models;
 using System.Text.Json.Serialization;
 
 namespace KineticTechnicalChallenge.Core.Contract.DTO

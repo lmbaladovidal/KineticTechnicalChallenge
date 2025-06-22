@@ -1,4 +1,5 @@
 ﻿using KineticTechnicalChallenge.Core.Contract.Configuration;
+using KineticTechnicalChallenge.Core.Contract.Enums;
 using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using KineticTechnicalChallenge.Core.Data;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using System.Text.Json;
 
 namespace KineticTechnicalChallenge.Services.BackGroundServices
 {
+    //Gen With IA
     public class ProcessWorker : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
@@ -63,7 +65,7 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
 
                 foreach (var file in remainingFiles)
                 {
-                    await Task.Delay(20000, stoppingToken);
+                    await Task.Delay(10000, stoppingToken);
                     if (await IsPausedOrStopped(process.Id, _context, _logger))
                     {
                         isPausedOrStopped = true;
@@ -99,6 +101,8 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     process.Percentage = (int)((double)process.ProcessedFiles / process.TotalFiles * 100);
 
                     await _context.SaveChangesAsync();
+                    if (process.Percentage == 100 && isPausedOrStopped)
+                        isPausedOrStopped = false;
                 }
 
                 if (process.Status == ProcessStatus.Running && !isPausedOrStopped)
