@@ -6,6 +6,7 @@ namespace KineticTechnicalChallenge.Core.Contract.Interfaces
     {
         Task<ProcessResponse> StartProcessAsync();
         Task<ProcessResponse> StopProcessAsync(string processGuid);
+        Task<ProcessResponse> ContinueProcessAsync(string processGuid);
         Task<ProcessResponse> GetProcessStatusAsync(string processGuid);
         Task<List<ProcessResponse>> ListProcessesAsync();
         Task<ProcessResponse> GetProcessResultsAsync(string processGuid);

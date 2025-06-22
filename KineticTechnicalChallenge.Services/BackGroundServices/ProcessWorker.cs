@@ -16,8 +16,12 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
         private readonly IProcessQueue _queue;
         private readonly ILogger<ProcessWorker> _logger;
         private readonly TextProcessingSettings _settings;
+        private bool isPausedOrStopped = false;
 
-        public ProcessWorker(IServiceProvider serviceProvider, IProcessQueue queue, ILogger<ProcessWorker> logger, IOptions<TextProcessingSettings> settings)
+        public ProcessWorker(IServiceProvider serviceProvider,
+                            IProcessQueue queue,
+                            ILogger<ProcessWorker> logger,
+                            IOptions<TextProcessingSettings> settings)
         {
             _serviceProvider = serviceProvider;
             _queue = queue;
@@ -34,7 +38,6 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     await Task.Delay(500, stoppingToken);
                     continue;
                 }
-
                 using var scope = _serviceProvider.CreateScope();
                 var _context = scope.ServiceProvider.GetRequiredService<DocumentContext>();
                 var analyzer = scope.ServiceProvider.GetRequiredService<IAnalysisServices>();
@@ -43,7 +46,10 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     .Include(p => p.Results)
                     .FirstOrDefaultAsync(p => p.Id == processId);
 
-                if (process == null || process.Status != ProcessStatus.Pending)
+                if (process == null ||
+                    process.Status != ProcessStatus.Pending ||
+                    process.Status == ProcessStatus.Stopped ||
+                    process.Status == ProcessStatus.Paused)
                     continue;
 
                 process.Status = ProcessStatus.Running;
@@ -57,7 +63,12 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
 
                 foreach (var file in remainingFiles)
                 {
-                    if (await IsPausedOrStopped(process.Id, _context)) break;
+                    await Task.Delay(20000, stoppingToken);
+                    if (await IsPausedOrStopped(process.Id, _context, _logger))
+                    {
+                        isPausedOrStopped = true;
+                        break;
+                    }
                     var inputFolder = _settings.InputFolder;
                     var filePath = Path.Combine(inputFolder, file);
                     var content = await File.ReadAllTextAsync(filePath);
@@ -90,7 +101,7 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     await _context.SaveChangesAsync();
                 }
 
-                if (process.Status == ProcessStatus.Running)
+                if (process.Status == ProcessStatus.Running && !isPausedOrStopped)
                 {
                     process.Status = ProcessStatus.Completed;
                     process.EstimatedCompletion = DateTime.UtcNow;
@@ -99,9 +110,12 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
             }
         }
 
-        private static async Task<bool> IsPausedOrStopped(Guid id, DocumentContext db)
+        private static async Task<bool> IsPausedOrStopped(Guid id, DocumentContext context, ILogger<ProcessWorker> logger)
         {
-            var latest = await db.Processes.FindAsync(id);
+            var latest = await context.Processes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id);
+            logger.LogInformation($"Process {id} is {latest?.Status}");
             return latest.Status == ProcessStatus.Paused || latest.Status == ProcessStatus.Stopped;
         }
     }

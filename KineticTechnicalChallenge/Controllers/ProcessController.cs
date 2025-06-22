@@ -30,11 +30,60 @@ namespace KineticTechnicalChallenge.API.Controllers
 
         [HttpPost("/process/stop/{processGuid}")]
         [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> StopProcess(string processGuid)
         {
-            var result = await _processServices.StopProcessAsync(processGuid);
-            _logger.LogInformation($"Process {processGuid} stopped successfully.");
-            return Ok(response);
+            try
+            {
+                var result = await _processServices.StopProcessAsync(processGuid);
+                _logger.LogInformation("Process {ProcessGuid} stopped successfully", processGuid);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPost("/process/continue/{processGuid}")]
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ContinueProcess(string processGuid)
+        {
+            try
+            {
+                var result = await _processServices.ContinueProcessAsync(processGuid);
+                _logger.LogInformation("Process {ProcessGuid} stopped successfully", processGuid);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("/process/status/{processGuid}")]
