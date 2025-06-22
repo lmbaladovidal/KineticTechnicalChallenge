@@ -35,11 +35,14 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                // Check if there are any processes in the queue
+                _logger.LogInformation("Checking for processes in the queue...");
                 if (!_queue.TryDequeue(out var processId))
                 {
                     await Task.Delay(500, stoppingToken);
                     continue;
                 }
+
                 using var scope = _serviceProvider.CreateScope();
                 var _context = scope.ServiceProvider.GetRequiredService<DocumentContext>();
                 var analyzer = scope.ServiceProvider.GetRequiredService<IAnalysisServices>();
@@ -47,7 +50,7 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                 var process = await _context.Processes
                     .Include(p => p.Results)
                     .FirstOrDefaultAsync(p => p.Id == processId);
-
+                _logger.LogInformation($"Processing ID: {processId}, Status: {process?.Status}");
                 if (process == null ||
                     process.Status != ProcessStatus.Pending ||
                     process.Status == ProcessStatus.Stopped ||
@@ -62,7 +65,7 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                 var remainingFiles = fileNames.Skip(processedCount).ToList();
 
                 var results = process.Results;
-
+                _logger.LogInformation($"Remaining files to process: {remainingFiles.Count}");
                 foreach (var file in remainingFiles)
                 {
                     await Task.Delay(10000, stoppingToken);
@@ -74,9 +77,9 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     var inputFolder = _settings.InputFolder;
                     var filePath = Path.Combine(inputFolder, file);
                     var content = await File.ReadAllTextAsync(filePath);
-
+                    _logger.LogInformation($"AnalyzeFile Statring");
                     var partial = analyzer.AnalyzeFile(content, file);
-
+                    _logger.LogInformation($"AnalyzeFile Completed for {file}");
                     results.TotalWords += partial.TotalWords;
                     results.TotalLines += partial.TotalLines;
                     results.TotalCharacters += partial.TotalCharacters;
@@ -101,12 +104,14 @@ namespace KineticTechnicalChallenge.Services.BackGroundServices
                     process.Percentage = (int)((double)process.ProcessedFiles / process.TotalFiles * 100);
 
                     await _context.SaveChangesAsync();
-                    if (process.Percentage == 100 && isPausedOrStopped)
-                        isPausedOrStopped = false;
+                    _logger.LogInformation($"Processed file: {file}, Total processed: {process.ProcessedFiles}/{process.TotalFiles}, Percentage: {process.Percentage}%");
                 }
+                if (process.Percentage == 100 && isPausedOrStopped)
+                    isPausedOrStopped = false;
 
                 if (process.Status == ProcessStatus.Running && !isPausedOrStopped)
                 {
+                    _logger.LogInformation($"Process {process.Id} completed successfully.");
                     process.Status = ProcessStatus.Completed;
                     process.EstimatedCompletion = DateTime.UtcNow;
                     await _context.SaveChangesAsync();

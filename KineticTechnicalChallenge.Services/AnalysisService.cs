@@ -6,7 +6,7 @@ namespace KineticTechnicalChallenge.Services
 {
     public class AnalysisService : IAnalysisServices
     {
-        //Gen With IA
+
         public AnalysisResultDTO AnalyzeFile(string fileContent, string fileName)
         {
             var totalWords = 0;
@@ -47,6 +47,7 @@ namespace KineticTechnicalChallenge.Services
             };
         }
 
+        //Gen with IA
         public AnalysisResultDTO AnalyzeFiles(List<string> fileContents, List<string> fileNames)
         {
             var totalWords = 0;

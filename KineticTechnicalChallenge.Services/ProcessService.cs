@@ -47,6 +47,7 @@ namespace KineticTechnicalChallenge.Services
                 .FirstOrDefaultAsync(r => r.ProcessInfoId == Guid.Parse(processGuid));
             if (result != null)
             {
+                _logger.LogInformation($"Process Result found for ID: {processGuid}");
                 return new ProcessResponse
                 {
                     Results = new AnalysisResultDTO
@@ -72,6 +73,7 @@ namespace KineticTechnicalChallenge.Services
             {
                 throw new ArgumentException("Invalid GUID format", nameof(processGuid));
             }
+            _logger.LogInformation($"Getting status for process with ID: {processGuid}");
             var processStatus = await _context.Processes
                 .Where(ProcessStatus => ProcessStatus.Id == Guid.Parse(processGuid))
                 .Select(p => p.Status).FirstOrDefaultAsync();
@@ -86,6 +88,7 @@ namespace KineticTechnicalChallenge.Services
 
         public async Task<List<ProcessResponse>> ListProcessesAsync()
         {
+            _logger.LogInformation("Listing all processes");
             var processes = await _context.Processes
                 .Include(p => p.Results).ToListAsync();
             var processResponses = new List<ProcessResponse>();
@@ -93,6 +96,7 @@ namespace KineticTechnicalChallenge.Services
             {
                 foreach (var process in processes)
                 {
+                    _logger.LogInformation($"Process ID: {process.Id}, Status: {process.Status}, StartedAt: {process.StartedAt}, EstimatedCompletion: {process.EstimatedCompletion}");
                     processResponses.Add(new ProcessResponse
                     {
                         ProcessInfoDTO = new ProcessInfoDTO
@@ -132,6 +136,7 @@ namespace KineticTechnicalChallenge.Services
             List<ProcessResponse> processResponses = new List<ProcessResponse>();
             foreach (var process in batchesFiles)
             {
+                _logger.LogInformation($"Starting process for batch with ID: {process.Id}");
                 await _context.Processes.AddAsync(process);
                 await _context.SaveChangesAsync();
                 _queue.Enqueue(process.Id);
@@ -158,6 +163,7 @@ namespace KineticTechnicalChallenge.Services
                         FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
                     }
                 });
+                _logger.LogInformation($"Process for batch with ID: {process.Id} created and enqueued successfully");
             }
 
             return processResponses;
@@ -165,9 +171,11 @@ namespace KineticTechnicalChallenge.Services
 
         private List<ProcessInfo> SetBatches((List<string> contents, List<string> filenames) files)
         {
+            _logger.LogInformation("Starting with batch control");
             var batches = new List<ProcessInfo>();
             for (var i = 0; i < files.filenames.Count; i += 5)
             {
+                _logger.LogInformation($"Creating batch N{batches.Count + 1}");
                 var batchFiles = files.filenames.Skip(i).Take(5).ToList();
                 if (batchFiles.Count > 0)
                 {
@@ -198,12 +206,13 @@ namespace KineticTechnicalChallenge.Services
                     batches.Add(process);
                 }
             }
-
+            _logger.LogInformation($"Total batches created: {batches.Count}");
             return batches;
         }
 
         private async Task<(List<string> contents, List<string> filenames)> GetFiles()
         {
+            _logger.LogInformation("Obtaining Files");
             var files = Directory.GetFiles(_settings.InputFolder, "*.txt");
             var contents = new List<string>();
             var fileNames = new List<string>();
@@ -214,12 +223,9 @@ namespace KineticTechnicalChallenge.Services
                 contents.Add(await File.ReadAllTextAsync(file));
                 fileNames.Add(Path.GetFileName(file));
             }
+            _logger.LogInformation("Files obtained successfully");
             return (contents, fileNames);
 
-        }
-        private object SetProcessResponse()
-        {
-            throw new NotImplementedException();
         }
 
         public async Task<ProcessResponse> StopProcessAsync(string processGuid)
@@ -235,6 +241,7 @@ namespace KineticTechnicalChallenge.Services
 
             if (process != null)
             {
+                _logger.LogInformation($"Stopping process with ID: {process.Id}");
                 process.Status = ProcessStatus.Stopped;
                 await _context.SaveChangesAsync();
             }
@@ -279,6 +286,7 @@ namespace KineticTechnicalChallenge.Services
                                        && (p.Status == ProcessStatus.Stopped || p.Status == ProcessStatus.Paused));
             if (process != null)
             {
+                _logger.LogInformation($"Continuing process with ID: {process.Id}");
                 process.Status = ProcessStatus.Pending;
                 await _context.SaveChangesAsync();
                 _queue.Enqueue(Guid.Parse(processGuid));
