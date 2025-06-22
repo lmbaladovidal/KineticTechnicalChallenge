@@ -5,6 +5,7 @@ using KineticTechnicalChallenge.Core.Contract.Enums;
 using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using KineticTechnicalChallenge.Core.Data;
 using KineticTechnicalChallenge.Core.Data.Models;
+using KineticTechnicalChallenge.Services.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -55,8 +56,8 @@ namespace KineticTechnicalChallenge.Services
                         TotalWords = result.TotalWords,
                         TotalLines = result.TotalLines,
                         TotalCharacters = result.TotalCharacters,
-                        MostFrequentWords = JsonSerializer.Deserialize<List<string>>(result.MostFrequentWordsJson) ?? new List<string>(),
-                        FilesProcessed = JsonSerializer.Deserialize<List<string>>(result.FilesProcessedJson) ?? new List<string>()
+                        MostFrequentWords = JsonManager.SafeDeserialize<List<string>>(result.MostFrequentWordsJson, _logger),
+                        FilesProcessed = JsonManager.SafeDeserialize<List<string>>(result.FilesProcessedJson, _logger)
                     }
                 };
             }
@@ -159,8 +160,8 @@ namespace KineticTechnicalChallenge.Services
                         TotalWords = process.Results.TotalWords,
                         TotalLines = process.Results.TotalLines,
                         TotalCharacters = process.Results.TotalCharacters,
-                        MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
-                        FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
+                        MostFrequentWords = JsonManager.SafeDeserialize<List<string>>(process.Results.MostFrequentWordsJson, _logger),
+                        FilesProcessed = JsonManager.SafeDeserialize<List<string>>(process.Results.FilesProcessedJson, _logger)
                     }
                 });
                 _logger.LogInformation($"Process for batch with ID: {process.Id} created and enqueued successfully");
@@ -173,10 +174,10 @@ namespace KineticTechnicalChallenge.Services
         {
             _logger.LogInformation("Starting with batch control");
             var batches = new List<ProcessInfo>();
-            for (var i = 0; i < files.filenames.Count; i += 5)
+            for (var i = 0; i < files.filenames.Count; i += _settings.BatchSize)
             {
                 _logger.LogInformation($"Creating batch N{batches.Count + 1}");
-                var batchFiles = files.filenames.Skip(i).Take(5).ToList();
+                var batchFiles = files.filenames.Skip(i).Take(_settings.BatchSize).ToList();
                 if (batchFiles.Count > 0)
                 {
                     var processId = Guid.NewGuid();
@@ -268,8 +269,8 @@ namespace KineticTechnicalChallenge.Services
                     TotalWords = process.Results.TotalWords,
                     TotalLines = process.Results.TotalLines,
                     TotalCharacters = process.Results.TotalCharacters,
-                    MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
-                    FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
+                    MostFrequentWords = JsonManager.SafeDeserialize<List<string>>(process.Results.MostFrequentWordsJson, _logger),
+                    FilesProcessed = JsonManager.SafeDeserialize<List<string>>(process.Results.FilesProcessedJson, _logger)
                 }
             };
         }
@@ -315,8 +316,8 @@ namespace KineticTechnicalChallenge.Services
                     TotalWords = process.Results.TotalWords,
                     TotalLines = process.Results.TotalLines,
                     TotalCharacters = process.Results.TotalCharacters,
-                    MostFrequentWords = JsonSerializer.Deserialize<List<string>>(process.Results.MostFrequentWordsJson) ?? new List<string>(),
-                    FilesProcessed = JsonSerializer.Deserialize<List<string>>(process.Results.FilesProcessedJson) ?? new List<string>()
+                    MostFrequentWords = JsonManager.SafeDeserialize<List<string>>(process.Results.MostFrequentWordsJson, _logger),
+                    FilesProcessed = JsonManager.SafeDeserialize<List<string>>(process.Results.FilesProcessedJson, _logger)
                 }
             };
         }
