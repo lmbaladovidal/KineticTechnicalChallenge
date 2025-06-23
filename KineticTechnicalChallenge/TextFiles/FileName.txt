@@ -1,0 +1,9 @@
+Se refactorizo el codigo para adaptar los cambios de REBA
+Se corrigio una condicion para el CRS
+Se ajusto la fecha de vencimiento de REBA para que tambien tome los segundos
+Se mofico la forma de graba adicionales para que sea mas eficiente
+Se agrego una validacion en los adicionales comp para que no los tome si no se informo previamente su adicional correspondiente
+Se realizo el update de la fecha 2024-07-19
+Se realizaron updates sobre fehcas de novedades para ser tomada por los procesos de GX
+Se realizaron fixes sobre el codigo para obtener las provincias de las novedades
+Se refactorizo el control de duplicidad

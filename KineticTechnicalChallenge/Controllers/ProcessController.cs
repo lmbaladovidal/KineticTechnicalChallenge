@@ -1,6 +1,8 @@
+using KineticTechnicalChallenge.Core.Contract.DTO.Response;
+using KineticTechnicalChallenge.Core.Contract.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KineticTechnicalChallenge.Controllers
+namespace KineticTechnicalChallenge.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -8,41 +10,167 @@ namespace KineticTechnicalChallenge.Controllers
     {
 
         private readonly ILogger<ProcessController> _logger;
-
-        public ProcessController(ILogger<ProcessController> logger)
+        private readonly IProcessServices _processServices;
+        public ProcessController(ILogger<ProcessController> logger, IProcessServices process)
         {
             _logger = logger;
+            _processServices = process ?? throw new ArgumentNullException(nameof(process));
         }
 
         [HttpPost("/process/start")]
-        public IActionResult StartProcess()
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> StartProcess()
         {
-            _logger.LogInformation("Process started successfully.");
-            return Ok("Process started successfully.");
+            _logger.LogInformation("Starting a new process...");
+            var result = await _processServices.StartProcessAsync();
+            if (result == null)
+            {
+                _logger.LogError("Failed to start process.");
+                return StatusCode(500, "Internal server error");
+            }
+            _logger.LogInformation("Process created successfully");
+            return StatusCode(StatusCodes.Status201Created, result);
         }
-        [HttpPost("/process/stop")]
-        public IActionResult StopProcess()
+
+        [HttpPost("/process/stop/{processGuid}")]
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> StopProcess(string processGuid)
         {
-            _logger.LogInformation("Process stopped successfully.");
-            return Ok("Process stopped successfully.");
+            try
+            {
+                _logger.LogInformation("Stopping process with ID: {ProcessGuid}", processGuid);
+                var result = await _processServices.StopProcessAsync(processGuid);
+                _logger.LogInformation("Process {ProcessGuid} stopped successfully", processGuid);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
         }
-        [HttpGet("/process/status/{process_id}")]
-        public IActionResult GetProcessStatus(int process_id)
+
+        [HttpPost("/process/continue/{processGuid}")]
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ContinueProcess(string processGuid)
         {
-            _logger.LogInformation($"Status requested for process ID: {process_id}");
-            return Ok($"Status for process ID {process_id} is running.");
+            try
+            {
+                _logger.LogInformation("Continuing process with ID: {ProcessGuid}", processGuid);
+                var result = await _processServices.ContinueProcessAsync(processGuid);
+                _logger.LogInformation("Process {ProcessGuid} stopped successfully", processGuid);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error continuing process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
         }
+
+        [HttpGet("/process/status/{processGuid}")]
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProcessStatus(string processGuid)
+        {
+            try
+            {
+                var response = await _processServices.GetProcessStatusAsync(processGuid);
+                _logger.LogInformation($"Status requested for process ID: {processGuid}");
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting status process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
+
+        }
+
         [HttpGet("/process/list")]
-        public IActionResult ListProcesses()
+        [ProducesResponseType<List<ProcessResponse>>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ListProcesses()
         {
-            _logger.LogInformation("Listing all processes.");
-            return Ok("List of all processes.");
+            try
+            {
+                var processResponseList = await _processServices.ListProcessesAsync();
+                _logger.LogInformation("Listing all processes.");
+                return Ok(processResponseList);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting process");
+                return StatusCode(500, "Internal server error");
+            }
         }
-        [HttpGet("/process/results/{process_id}")]
-        public IActionResult GetProcessResults(int process_id)
+
+        [HttpGet("/process/results/{processGuid}")]
+        [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProcessResults(string processGuid)
         {
-            _logger.LogInformation($"Results requested for process ID: {process_id}");
-            return Ok($"Results for process ID {process_id} are available.");
+            try
+            {
+                _logger.LogInformation("Getting results for process with ID: {ProcessGuid}", processGuid);
+                var response = await _processServices.GetProcessResultsAsync(processGuid);
+                _logger.LogInformation($"Results requested for process ID: {processGuid}");
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Invalid GUID format: {ProcessGuid}", processGuid);
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Process not found or invalid state: {ProcessGuid}", processGuid);
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting result process {ProcessGuid}", processGuid);
+                return StatusCode(500, "Internal server error");
+            }
         }
     }
 }
